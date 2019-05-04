@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import './note.dart';
 
 void main() => runApp(new MyApp());
 
@@ -15,15 +16,18 @@ class TodoList extends StatefulWidget {
 }
 
 class TodoListState extends State<TodoList> {
-  List<String> _todoItems = [];
+  List<Note> _todoItems = [];
 
-  void _addTodoItem(String task) {
-    if (task.length > 0) {
+  void _addTodoItem(Note task) {
+    if (task.title.length > 0) {
       setState(() => _todoItems.add(task));
     }
   }
 
   void _pushAddTodoScreen() {
+    final titleCtrl = TextEditingController();
+    final bodyCtrl = TextEditingController();
+
     Navigator.of(context).push(new MaterialPageRoute(builder: (context) {
       return new Scaffold(
           appBar: new AppBar(
@@ -31,8 +35,11 @@ class TodoListState extends State<TodoList> {
             actions: <Widget>[
               new FlatButton(
                 child: new Text('ADD'),
-                onPressed: () => Navigator.of(context).pop(),
-
+                onPressed: () {
+                  _addTodoItem(
+                      new Note(title: titleCtrl.text, body: bodyCtrl.text));
+                  Navigator.of(context).pop();
+                },
                 textColor: Color.fromRGBO(255, 255, 255, 1.0),
               ),
             ],
@@ -41,10 +48,7 @@ class TodoListState extends State<TodoList> {
             children: <Widget>[
               new TextField(
                 autofocus: true,
-                // onSubmitted: (val) {
-                //   _addTodoItem(val);
-                //   // Navigator.pop(context);
-                // },
+                controller: titleCtrl,
                 decoration: new InputDecoration(
                     hintText: 'Enter to do title',
                     contentPadding: const EdgeInsets.all(16.0)),
@@ -53,14 +57,10 @@ class TodoListState extends State<TodoList> {
                 child: new TextField(
                   maxLines: null,
                   keyboardType: TextInputType.multiline,
-                  
-                  // onSubmitted: (val) {
-                  //   _addTodoItem(val);
-                  // },
+                  controller: bodyCtrl,
                   decoration: new InputDecoration(
                       hintText: 'Enter something to do...',
-                      contentPadding: const EdgeInsets.all(16.0)), 
-
+                      contentPadding: const EdgeInsets.all(16.0)),
                 ),
               )
             ],
@@ -84,7 +84,7 @@ class TodoListState extends State<TodoList> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
               new FlatButton(
-                child: new Text('DONE'),
+                child: new Text('MARK AS DONE'),
                 onPressed: () {
                   _removeTodoItem(index);
                   Navigator.of(context).pop();
@@ -99,7 +99,7 @@ class TodoListState extends State<TodoList> {
     return new ListView.builder(
       itemBuilder: (context, index) {
         if (index < _todoItems.length) {
-          return _buildTodoItem(_todoItems[index], index);
+          return _buildTodoItem(_todoItems[index].title, index);
         }
       },
     );
@@ -107,8 +107,16 @@ class TodoListState extends State<TodoList> {
 
   Widget _buildTodoItem(String todoText, int index) {
     return new ListTile(
-      title: new Text("${(index + 1).toString()}. ${todoText}"),
+      title: new Text((index + 1).toString() + '. ' + todoText),
       onLongPress: () => _promptRemoveTodoItem(index),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailScreen(todo: _todoItems[index]),
+          ),
+        );
+      },
     );
   }
 
@@ -121,6 +129,25 @@ class TodoListState extends State<TodoList> {
           onPressed: _pushAddTodoScreen,
           tooltip: 'Add task',
           child: new Icon(Icons.add)),
+    );
+  }
+}
+
+class DetailScreen extends StatelessWidget {
+  final Note todo;
+
+  DetailScreen({Key key, @required this.todo}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(todo.title),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Text(todo.body),
+      ),
     );
   }
 }
