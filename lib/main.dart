@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import './note.dart';
+import 'package:todo_app/model/note.dart';
+import 'package:todo_app/service/db_provider.dart';
 
 void main() => runApp(new MyApp());
 
@@ -16,15 +17,7 @@ class TodoList extends StatefulWidget {
 }
 
 class TodoListState extends State<TodoList> {
-  List<Note> _todoItems = [];
-
-  void _addTodoItem(Note task) {
-    if (task.title.length > 0) {
-      setState(() => _todoItems.add(task));
-    }
-  }
-
-  void _pushAddTodoScreen() {
+  void _pushAddTodoScreen() async {
     final titleCtrl = TextEditingController();
     final bodyCtrl = TextEditingController();
 
@@ -35,9 +28,11 @@ class TodoListState extends State<TodoList> {
             actions: <Widget>[
               new FlatButton(
                 child: new Text('ADD'),
-                onPressed: () {
-                  _addTodoItem(
-                      new Note(title: titleCtrl.text, body: bodyCtrl.text));
+                onPressed: () async {
+                  Note note =
+                      new Note(title: titleCtrl.text, body: bodyCtrl.text);
+                  await DBProvider.db.createNote(note);
+                  setState(() {});
                   Navigator.of(context).pop();
                 },
                 textColor: Color.fromRGBO(255, 255, 255, 1.0),
@@ -68,63 +63,55 @@ class TodoListState extends State<TodoList> {
     }));
   }
 
-  void _removeTodoItem(int index) {
-    setState(() => _todoItems.removeAt(index));
-  }
-
-  void _promptRemoveTodoItem(int index) {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return new AlertDialog(
-            title: new Text('Mark "${_todoItems[index]}" as done?'),
-            actions: <Widget>[
-              new FlatButton(
-                child: new Text('CANCEL'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              new FlatButton(
-                child: new Text('MARK AS DONE'),
-                onPressed: () {
-                  _removeTodoItem(index);
-                  Navigator.of(context).pop();
-                },
-              )
-            ],
+  Widget _buildTodoList(BuildContext context, AsyncSnapshot snapshot) {
+    if (!snapshot.hasData || snapshot.data == null) {
+      print(snapshot);
+      return Center(child: CircularProgressIndicator());
+    } else {
+      return new ListView.builder(
+        itemCount: snapshot.data.length,
+        itemBuilder: (context, index) {
+          Note item = snapshot.data[index];
+          return Dismissible(
+            direction: DismissDirection.endToStart,
+            key: UniqueKey(),
+            background: Container(
+                color: Colors.greenAccent,
+                child: Align(
+                    alignment: Alignment.lerp(
+                        Alignment.centerRight, Alignment.center, 0.1),
+                    child: Icon(
+                      Icons.archive,
+                      size: 50,
+                      color: Colors.white
+                    ))),
+            onDismissed: (direction) {
+              DBProvider.db.deleteNote(item.id);
+            },
+            child: ListTile(
+              title: Text(item.title),
+              contentPadding: EdgeInsetsDirectional.fromSTEB(10, 5, 10, 5),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailScreen(todo: item),
+                  ),
+                );
+              },
+            ),
           );
-        });
-  }
-
-  Widget _buildTodoList() {
-    return new ListView.builder(
-      itemBuilder: (context, index) {
-        if (index < _todoItems.length) {
-          return _buildTodoItem(_todoItems[index].title, index);
-        }
-      },
-    );
-  }
-
-  Widget _buildTodoItem(String todoText, int index) {
-    return new ListTile(
-      title: new Text((index + 1).toString() + '. ' + todoText),
-      onLongPress: () => _promptRemoveTodoItem(index),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailScreen(todo: _todoItems[index]),
-          ),
-        );
-      },
-    );
+        },
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(title: new Text('Todo List')),
-      body: _buildTodoList(),
+      body: new FutureBuilder<List<Note>>(
+          future: DBProvider.db.getAllNotes(), builder: _buildTodoList),
       floatingActionButton: new FloatingActionButton(
           onPressed: _pushAddTodoScreen,
           tooltip: 'Add task',
@@ -140,13 +127,31 @@ class DetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bodyCtrl = TextEditingController(text: todo.body);
     return Scaffold(
       appBar: AppBar(
-        title: Text(todo.title),
-      ),
+          title: Text(todo.title + ' (#' + todo.id.toString() + ')'),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text('ADD'),
+              onPressed: () async {
+                Note note = new Note(
+                    id: todo.id, title: todo.title, body: bodyCtrl.text);
+                await DBProvider.db.updateNote(note);
+                Navigator.of(context).pop();
+              },
+              textColor: Color.fromRGBO(255, 255, 255, 1.0),
+            ),
+          ]),
       body: Padding(
         padding: EdgeInsets.all(16.0),
-        child: Text(todo.body),
+        child: new TextField(
+          autofocus: true,
+          controller: bodyCtrl,
+          decoration: new InputDecoration(
+              hintText: 'Enter to do data',
+              contentPadding: const EdgeInsets.all(16.0)),
+        ),
       ),
     );
   }
