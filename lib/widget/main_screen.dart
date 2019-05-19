@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:todo_app/model/note.dart';
 import 'package:todo_app/service/db_provider.dart';
 import 'package:todo_app/widget/detail_screen.dart';
+import 'package:sensors/sensors.dart';
+import 'package:todo_app/widget/sensor_screen.dart';
 
 class TodoList extends StatefulWidget {
   @override
@@ -55,6 +57,12 @@ class TodoListState extends State<TodoList> {
     }));
   }
 
+  // void kek() {
+  //   accelerometerEvents.listen((AccelerometerEvent event) {
+
+  //   });
+  // }
+
   Widget _buildTodoList(BuildContext context, AsyncSnapshot snapshot) {
     if (!snapshot.hasData || snapshot.data == null) {
       print(snapshot);
@@ -96,14 +104,31 @@ class TodoListState extends State<TodoList> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(title: new Text('Todo List')),
-      body: new FutureBuilder<List<Note>>(
-          future: DBProvider.db.getAllNotes(), builder: _buildTodoList),
-      floatingActionButton: new FloatingActionButton(
-          onPressed: _pushAddTodoScreen,
-          tooltip: 'Add task',
-          child: new Icon(Icons.add)),
-    );
+    return Scaffold(
+        appBar: AppBar(title: Text('Todo List')),
+        body: FutureBuilder<List<Note>>(
+            future: DBProvider.db.getAllNotes(), builder: _buildTodoList),
+        floatingActionButton: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            FloatingActionButton(
+                heroTag: 'btn1',
+                onPressed: _pushAddTodoScreen,
+                tooltip: 'Add task',
+                child: Icon(Icons.add)),
+            Padding(
+              padding: EdgeInsets.all(5),
+            ),
+            FloatingActionButton(
+                heroTag: 'btn2',
+                onPressed: () {
+                  Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => SensorScreen()));
+                },
+                tooltip: 'Additional features',
+                child: Icon(Icons.assessment))
+          ],
+        ));
   }
 }
